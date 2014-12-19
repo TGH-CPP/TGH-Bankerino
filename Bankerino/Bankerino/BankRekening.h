@@ -16,6 +16,7 @@ public:
 		balance += money;
 		return BankRekening(id, balance);
 	};
+private:
 	double balance;
 };
 

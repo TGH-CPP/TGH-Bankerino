@@ -89,6 +89,144 @@ void getCommand(std::string command, std::string &word_1, std::string &word_2, b
 	section_command(command, word_1, word_2, makeUpper);
 }
 
+void loginHandler(std::string& word_1, std::string& word_2, std::list<BankAccount>& accounts, BankAccount& currentAccount, bool& loggedIn){
+	bool match = false;
+	for (BankAccount& account : accounts){
+		if (word_1 == account.naam){
+			match = true;
+			if (word_2 == account.pass){
+				currentAccount = account;
+				std::cout << "Logged in succesfully as " + account.naam + "." << std::endl;
+			}
+			else{
+				std::cout << "Incorrect password." << std::endl;
+			}
+		}
+	}
+	if (match){
+		loggedIn = true;
+	}
+	else{
+		std::cout << "This name does not match any account names." << std::endl;
+	}
+}
+void transferHandler(std::string& command, std::string& word_1, std::string& word_2, std::list<BankAccount>& accounts, BankAccount& currentAccount){
+	std::cout << "Transfer has started, please input the ID you want to transfer too and the amount of MONEY you want to transfer (Formatted as ID MONEY in next command)." << std::endl;
+	getCommand(command, word_1, word_2, false);
+	try
+	{
+		std::stringstream stream(word_1);
+		long id;
+		char test;
+
+		if ((!(stream >> id)) || (stream >> test))
+		{
+			throw std::runtime_error("NaN");
+		}
+
+		std::stringstream stream1(word_2);;
+		double money;
+		char test1;
+
+		if ((!(stream1 >> money)) || (stream1 >> test1))
+		{
+			throw std::runtime_error("NaN");
+		}
+		bool match = false;
+		for (BankAccount& account : accounts){
+			if (account.rekening.id == id){
+				match = true;
+				account.rekening << currentAccount.rekening.getMoney(money);
+				std::cout << "Transfer succeeded" << std::endl;
+			}
+		}
+
+		if (!match)
+			throw std::runtime_error("404 ID not found");
+	}
+	catch (const std::runtime_error err)
+	{
+		std::cout << "Transfer failed. Error: " << err.what() << std::endl;
+	}
+};
+void newAccountHandler(std::string& command, std::list<BankAccount>& accounts){
+	std::string word_2;
+	std::cout << "Initiated new account, please input NAME & PASS for the new account" << std::endl;
+	std::string newName, newPass;
+	getCommand(command, newName, newPass, false);
+	std::cout << "Correctly got NAME & PASS, do you want to add an Adress and City? YES/NO" << std::endl;
+	std::string yesNo;
+	getCommand(command, yesNo, word_2, true);
+	if (yesNo == "YES"){
+		std::string newAdress, newCity;
+		std::cout << "Please enter the ADRESS & CITY you want to add to this new account" << std::endl;
+		getCommand(command, newAdress, newCity, false);
+
+		std::cout << "Please enter the LEVEL (0,1,2) & BALANCE the account should have" << std::endl;
+		std::string newLevelStr, newBalance;
+		getCommand(command, newLevelStr, newBalance, false);
+		try{
+			std::stringstream stream(newLevelStr);
+			int newLevel;
+			char test;
+
+			if ((!(stream >> newLevel)) || (stream >> test))
+			{
+				throw std::runtime_error("NaN");
+			}
+
+			std::stringstream stream1(newBalance);
+			double newBalance;
+
+			if ((!(stream1 >> newBalance)) || (stream1 >> test))
+			{
+				throw std::runtime_error("NaN");
+			}
+
+			accounts.push_back(BankAccount(newName, newPass, newAdress, newCity, newLevel, accounts.size(), newBalance));
+			std::cout << "Added the account!" << std::endl;
+
+		}
+		catch (const std::runtime_error err){
+			std::cout << "Failed to add account. Error: " << err.what() << std::endl;
+		}
+	}
+	else if (yesNo == "NO"){
+		std::cout << "Please enter the LEVEL (0,1,2) & BALANCE the account should have" << std::endl;
+		std::string newLevelStr, newBalanceStr;
+		getCommand(command, newLevelStr, newBalanceStr, false);
+
+		try{
+			std::stringstream stream(newLevelStr);
+			int newLevel;
+			char test;
+
+			if ((!(stream >> newLevel)) || (stream >> test))
+			{
+				throw std::runtime_error("NaN");
+			}
+
+			std::stringstream stream1(newBalanceStr);
+			double newBalance;
+
+			if ((!(stream1 >> newBalance)) || (stream1 >> test))
+			{
+				throw std::runtime_error("NaN");
+			}
+
+			accounts.push_back(BankAccount(newName, newPass, newLevel, accounts.size(), newBalance));
+			std::cout << "Added the account!" << std::endl;
+
+		}
+		catch (const std::runtime_error err){
+			std::cout << "Failed to add account. Error: " << err.what() << std::endl;
+		}
+	}
+	else{
+		std::cout << "Didn't find YES or NO, please try to ADD ACCOUNT again" << std::endl;
+	}
+}
+
 int _tmain(int argc, _TCHAR* argv[])
 {
 	std::string command, word_1, word_2;
@@ -100,30 +238,12 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		if (initialized){
 			if (!loggedIn){
-				bool match = false;
-				for (BankAccount account : accounts){
-					if (word_1 == account.naam){
-						match = true;
-						if (word_2 == account.pass){
-							currentAccount = account;
-							std::cout << "Logged in succesfully as " + account.naam + "." << std::endl;
-						}
-						else{
-							std::cout << "Incorrect password." << std::endl;
-						}
-					}
-				}
-				if (match){
-					loggedIn = true;
-				}
-				else{
-					std::cout << "This name does not match any account names." << std::endl;
-				}
+				loginHandler(word_1, word_2, accounts, currentAccount, loggedIn);
 			}
 			else{
 				if (word_1 == "LOGOUT"){
 					loggedIn = false;
-					std::cout << "Succesfully logged out." << std::endl;
+					std::cout << "Succesfully logged out. Log back in with NAME PASS." << std::endl;
 				}
 				else if (word_1 == "SHOW"){
 					if (word_2 == "BALANCE"){
@@ -138,44 +258,19 @@ int _tmain(int argc, _TCHAR* argv[])
 				}
 				else if (word_1 == "TRANSFER"){
 					if (word_2 == "MONEY"){
-						std::cout << "Transfer has started, please input the ID you want to transfer too and the amount of MONEY you want to transfer." << std::endl;
-						getCommand(command, word_1, word_2, false);
-						try
-						{
-							std::stringstream stream(word_1);
-							long id;
-							char test;
-
-							if ((!(stream >> id)) || (stream >> test))
-							{
-								throw std::runtime_error("NaN");
-							}
-
-							std::stringstream stream1(word_2);
-							double money;
-							char test1;
-
-							if ((!(stream1 >> money)) || (stream1 >> test1))
-							{
-								throw std::runtime_error("NaN");
-							}
-							bool match = false;
-							for (BankAccount account : accounts){
-								if (account.rekening.id == id){
-									match = true;
-									account.rekening = account.rekening << currentAccount.rekening.getMoney(money);
-									std::cout << "Transfer succeeded" << std::endl;
-								}
-							}
-
-							if (!match)
-								throw std::runtime_error("404 ID not found");
-						}
-						catch (const std::runtime_error err)
-						{
-							std::cout << "Transfer failed. Error: " << err.what() << std::endl;
-						}
+						transferHandler(command, word_1, word_2, accounts, currentAccount);
 					}
+				}
+				else if (word_1 == "ADD" && word_2 == "ACCOUNT" && currentAccount.level >= 1){
+					newAccountHandler(command, accounts);
+				}
+				else if (word_1 == "HELP"){
+					std::cout << "Current usable commands are:" << std::endl;
+					std::cout << "\tLOGOUT\t\tLogs you out of current account" << std::endl;
+					std::cout << "\tSHOW PARAM\tShows BALANCE or ACCOUNT info" << std::endl;
+					std::cout << "\tTRANSFER MONEY\tTransfer money to another account" << std::endl;
+					if (currentAccount.level >= 1)
+						std::cout << "\tADD ACCOUNT\tLet's you add another account" << std::endl;
 				}
 			}
 			if (loggedIn){
